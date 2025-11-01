@@ -21,11 +21,12 @@ env/
 .DS_Store
 Thumbs.db
 
-# Output files from analysis (but keep documentation)
+# Output files from analysis (but keep documentation and templates)
 !README.md
 !CLAUDE.md
 !CLAUDE_CODE_CONTEXT.md
 *.html
+!templates/*.html
 *.json
 !requirements.txt
 
