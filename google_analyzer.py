@@ -28,13 +28,19 @@ def get_credentials():
 
     # First, try to load from environment variables (Railway deployment)
     google_token = os.environ.get('GOOGLE_TOKEN')
+    print(f"DEBUG: GOOGLE_TOKEN env var exists: {bool(google_token)}, length: {len(google_token) if google_token else 0}")
     if google_token:
         try:
+            print(f"DEBUG: Attempting to parse GOOGLE_TOKEN JSON...")
             token_data = json.loads(google_token)
+            print(f"DEBUG: JSON parsed successfully, keys: {list(token_data.keys())}")
             creds = Credentials.from_authorized_user_info(token_data, SCOPES)
             print(f"✓ Loaded credentials from GOOGLE_TOKEN environment variable")
+            print(f"DEBUG: Credentials valid: {creds.valid}, expired: {creds.expired if hasattr(creds, 'expired') else 'N/A'}")
         except Exception as e:
+            import traceback
             print(f"❌ Could not load credentials from GOOGLE_TOKEN env var: {e}")
+            print(f"DEBUG: Traceback: {traceback.format_exc()}")
 
     # Fall back to file-based credentials (local development)
     if not creds and os.path.exists('token.json'):
