@@ -367,24 +367,31 @@
                 const result = await response.json();
 
                 if (result.success) {
-                    // Download the file
-                    progressText.textContent = '📥 Downloading file...';
+                    // Download the file and open it
+                    progressText.textContent = '📥 Opening results...';
 
                     const downloadResponse = await fetch(result.download_url);
                     const blob = await downloadResponse.blob();
 
-                    // Create download link
+                    // Create blob URL and open in new tab
                     const url = window.URL.createObjectURL(blob);
+                    window.open(url, '_blank');
+
+                    // Also download the file for the user to keep
                     const a = document.createElement('a');
                     a.href = url;
                     a.download = result.filename;
                     document.body.appendChild(a);
                     a.click();
-                    window.URL.revokeObjectURL(url);
                     document.body.removeChild(a);
 
+                    // Clean up blob URL after a delay
+                    setTimeout(() => {
+                        window.URL.revokeObjectURL(url);
+                    }, 1000);
+
                     // Show success message
-                    progressText.textContent = '✅ Download complete! Check your Downloads folder.\n\nYou can analyze another file now.';
+                    progressText.textContent = '✅ Results opened in new tab! File also saved to Downloads.\n\nYou can analyze another file now.';
                     btnText.style.display = 'inline';
                     btnLoading.style.display = 'none';
                     submitBtn.disabled = false;
