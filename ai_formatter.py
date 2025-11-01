@@ -624,3 +624,537 @@ class AIMarkdownFormatter:
             md += "\n```\n\n"
 
         return md
+
+    @staticmethod
+    def format_actions_html(items: List[Dict[str, Any]]) -> str:
+        """Format action items as interactive HTML"""
+        import json
+
+        # Filter to only include actual actions
+        real_actions = [
+            item for item in items
+            if item.get('is_action', False) == True
+            and 'error' not in item
+        ]
+
+        # Group by date
+        by_date = {}
+        for item in real_actions:
+            date = item.get('original_date', 'Unknown Date')
+            if date not in by_date:
+                by_date[date] = []
+            by_date[date].append(item)
+
+        # Sort dates
+        sorted_dates = sorted(by_date.keys(), key=lambda d: AIMarkdownFormatter._parse_date(d))
+
+        html = """<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Action Items - AI Analysis</title>
+    <style>
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            padding: 20px;
+            min-height: 100vh;
+        }
+        .container {
+            max-width: 1200px;
+            margin: 0 auto;
+            background: white;
+            border-radius: 20px;
+            padding: 40px;
+            box-shadow: 0 20px 60px rgba(0, 0, 0, 0.3);
+        }
+        h1 {
+            font-size: 32px;
+            color: #333;
+            margin-bottom: 10px;
+            display: flex;
+            align-items: center;
+            gap: 15px;
+        }
+        .subtitle {
+            color: #666;
+            margin-bottom: 30px;
+            font-size: 16px;
+        }
+        .date-section {
+            margin-bottom: 40px;
+        }
+        .date-header {
+            font-size: 24px;
+            color: #667eea;
+            margin-bottom: 20px;
+            padding-bottom: 10px;
+            border-bottom: 2px solid #e0e0e0;
+        }
+        .action-card {
+            background: #f8f9ff;
+            border-left: 4px solid #667eea;
+            padding: 20px;
+            margin-bottom: 15px;
+            border-radius: 8px;
+            transition: all 0.3s;
+        }
+        .action-card:hover {
+            transform: translateX(5px);
+            box-shadow: 0 4px 12px rgba(102, 126, 234, 0.2);
+        }
+        .action-card.priority-high {
+            border-left-color: #f44336;
+            background: #fff5f5;
+        }
+        .action-card.priority-medium {
+            border-left-color: #ff9800;
+            background: #fff9f5;
+        }
+        .action-card.priority-low {
+            border-left-color: #4caf50;
+            background: #f5fff5;
+        }
+        .action-title {
+            font-size: 18px;
+            font-weight: 600;
+            color: #333;
+            margin-bottom: 12px;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+        .action-meta {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+            gap: 10px;
+            margin-top: 12px;
+        }
+        .meta-item {
+            font-size: 14px;
+            color: #666;
+        }
+        .meta-label {
+            font-weight: 600;
+            color: #333;
+        }
+        .original-message {
+            margin-top: 12px;
+            padding: 10px;
+            background: white;
+            border-radius: 6px;
+            font-size: 13px;
+            color: #666;
+            font-style: italic;
+        }
+        .badge {
+            display: inline-block;
+            padding: 4px 10px;
+            border-radius: 12px;
+            font-size: 12px;
+            font-weight: 600;
+        }
+        .badge.status-completed {
+            background: #e8f5e9;
+            color: #2e7d32;
+        }
+        .badge.status-in-progress {
+            background: #fff3e0;
+            color: #e65100;
+        }
+        .badge.status-assigned {
+            background: #e3f2fd;
+            color: #1565c0;
+        }
+        .badge.status-mentioned {
+            background: #f3e5f5;
+            color: #6a1b9a;
+        }
+        .no-actions {
+            text-align: center;
+            color: #666;
+            padding: 40px;
+            font-size: 18px;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>✅ Action Items</h1>
+        <p class="subtitle">AI-Analyzed from WhatsApp Chat • Total: """ + str(len(real_actions)) + """ actions</p>
+"""
+
+        if not real_actions:
+            html += '<div class="no-actions">No action items found in this chat.</div>'
+        else:
+            for date in sorted_dates:
+                html += f'<div class="date-section"><h2 class="date-header">{date}</h2>'
+
+                for item in by_date[date]:
+                    action = item.get('action', '').strip()
+                    if not action or action == 'No action described':
+                        continue
+
+                    responsible = item.get('responsible', 'unspecified')
+                    deadline = item.get('deadline', 'No deadline')
+                    status = item.get('status', 'mentioned')
+                    priority = item.get('priority', 'medium')
+                    sender = item.get('original_sender', 'Unknown')
+                    time = item.get('original_time', '')
+                    content = item.get('original_content', '')
+
+                    priority_emoji = {'high': '🔴', 'medium': '🟡', 'low': '🟢'}.get(priority.lower(), '⚪')
+                    status_emoji = {'completed': '✅', 'in-progress': '🔄', 'assigned': '📋', 'mentioned': '💬'}.get(status.lower(), '❓')
+
+                    html += f'''
+        <div class="action-card priority-{priority.lower()}">
+            <div class="action-title">{priority_emoji} {status_emoji} {action}</div>
+            <div class="action-meta">
+                <div class="meta-item"><span class="meta-label">Responsible:</span> {responsible}</div>
+                <div class="meta-item"><span class="meta-label">Deadline:</span> {deadline}</div>
+                <div class="meta-item"><span class="meta-label">Priority:</span> <span class="badge">{priority}</span></div>
+                <div class="meta-item"><span class="meta-label">Status:</span> <span class="badge status-{status.lower()}">{status}</span></div>
+            </div>
+            <div class="meta-item" style="margin-top: 10px;"><span class="meta-label">Mentioned by:</span> {sender} at {time}</div>
+            <div class="original-message">"{content[:200]}..."</div>
+        </div>'''
+
+                html += '</div>'
+
+        html += """
+    </div>
+</body>
+</html>"""
+
+        return html
+
+    @staticmethod
+    def format_urls_html(items: List[Dict[str, Any]]) -> str:
+        """Format URLs as interactive HTML with clickable links"""
+        import json
+
+        # Group by date
+        by_date = {}
+        for item in items:
+            date = item.get('date', 'Unknown Date')
+            if date not in by_date:
+                by_date[date] = []
+            by_date[date].append(item)
+
+        sorted_dates = sorted(by_date.keys(), key=lambda d: AIMarkdownFormatter._parse_date(d))
+
+        html = """<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>URLs & Links - AI Analysis</title>
+    <style>
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            padding: 20px;
+            min-height: 100vh;
+        }
+        .container {
+            max-width: 1200px;
+            margin: 0 auto;
+            background: white;
+            border-radius: 20px;
+            padding: 40px;
+            box-shadow: 0 20px 60px rgba(0, 0, 0, 0.3);
+        }
+        h1 {
+            font-size: 32px;
+            color: #333;
+            margin-bottom: 10px;
+            display: flex;
+            align-items: center;
+            gap: 15px;
+        }
+        .subtitle {
+            color: #666;
+            margin-bottom: 30px;
+            font-size: 16px;
+        }
+        .date-section {
+            margin-bottom: 40px;
+        }
+        .date-header {
+            font-size: 24px;
+            color: #667eea;
+            margin-bottom: 20px;
+            padding-bottom: 10px;
+            border-bottom: 2px solid #e0e0e0;
+        }
+        .link-card {
+            background: #f8f9ff;
+            border-left: 4px solid #667eea;
+            padding: 20px;
+            margin-bottom: 15px;
+            border-radius: 8px;
+            transition: all 0.3s;
+        }
+        .link-card:hover {
+            transform: translateX(5px);
+            box-shadow: 0 4px 12px rgba(102, 126, 234, 0.2);
+        }
+        .link-title {
+            font-size: 18px;
+            font-weight: 600;
+            color: #333;
+            margin-bottom: 12px;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+        .link-url {
+            display: block;
+            color: #667eea;
+            text-decoration: none;
+            font-size: 14px;
+            margin-bottom: 10px;
+            word-break: break-all;
+            padding: 8px 12px;
+            background: white;
+            border-radius: 6px;
+            transition: all 0.2s;
+        }
+        .link-url:hover {
+            background: #667eea;
+            color: white;
+        }
+        .link-meta {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+            gap: 10px;
+            margin-top: 12px;
+        }
+        .meta-item {
+            font-size: 14px;
+            color: #666;
+        }
+        .meta-label {
+            font-weight: 600;
+            color: #333;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>🔗 URLs & Links</h1>
+        <p class="subtitle">AI-Analyzed from WhatsApp Chat • Total: """ + str(len(items)) + """ links</p>
+"""
+
+        if not items:
+            html += '<div style="text-align: center; color: #666; padding: 40px; font-size: 18px;">No links found in this chat.</div>'
+        else:
+            for date in sorted_dates:
+                html += f'<div class="date-section"><h2 class="date-header">{date}</h2>'
+
+                for item in by_date[date]:
+                    url = item.get('url', '')
+                    description = item.get('description', 'No description')
+                    shared_by = item.get('shared_by', 'Unknown')
+                    purpose = item.get('purpose', 'Not specified')
+                    time = item.get('time', '')
+
+                    html += f'''
+        <div class="link-card">
+            <div class="link-title">🔗 {description}</div>
+            <a href="{url}" target="_blank" class="link-url">{url}</a>
+            <div class="link-meta">
+                <div class="meta-item"><span class="meta-label">Shared by:</span> {shared_by} at {time}</div>
+                <div class="meta-item"><span class="meta-label">Purpose:</span> {purpose}</div>
+            </div>
+        </div>'''
+
+                html += '</div>'
+
+        html += """
+    </div>
+</body>
+</html>"""
+
+        return html
+
+    @staticmethod
+    def format_questions_html(items: List[Dict[str, Any]]) -> str:
+        """Format questions as interactive HTML"""
+        import json
+
+        # Group by date
+        by_date = {}
+        for item in items:
+            date = item.get('date', 'Unknown Date')
+            if date not in by_date:
+                by_date[date] = []
+            by_date[date].append(item)
+
+        sorted_dates = sorted(by_date.keys(), key=lambda d: AIMarkdownFormatter._parse_date(d))
+
+        html = """<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Questions - AI Analysis</title>
+    <style>
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            padding: 20px;
+            min-height: 100vh;
+        }
+        .container {
+            max-width: 1200px;
+            margin: 0 auto;
+            background: white;
+            border-radius: 20px;
+            padding: 40px;
+            box-shadow: 0 20px 60px rgba(0, 0, 0, 0.3);
+        }
+        h1 {
+            font-size: 32px;
+            color: #333;
+            margin-bottom: 10px;
+            display: flex;
+            align-items: center;
+            gap: 15px;
+        }
+        .subtitle {
+            color: #666;
+            margin-bottom: 30px;
+            font-size: 16px;
+        }
+        .date-section {
+            margin-bottom: 40px;
+        }
+        .date-header {
+            font-size: 24px;
+            color: #667eea;
+            margin-bottom: 20px;
+            padding-bottom: 10px;
+            border-bottom: 2px solid #e0e0e0;
+        }
+        .question-card {
+            background: #f8f9ff;
+            border-left: 4px solid #667eea;
+            padding: 20px;
+            margin-bottom: 15px;
+            border-radius: 8px;
+            transition: all 0.3s;
+        }
+        .question-card:hover {
+            transform: translateX(5px);
+            box-shadow: 0 4px 12px rgba(102, 126, 234, 0.2);
+        }
+        .question-card.answered {
+            border-left-color: #4caf50;
+            background: #f5fff5;
+        }
+        .question-card.unanswered {
+            border-left-color: #ff9800;
+            background: #fff9f5;
+        }
+        .question-title {
+            font-size: 18px;
+            font-weight: 600;
+            color: #333;
+            margin-bottom: 12px;
+            display: flex;
+            align-items: flex-start;
+            gap: 8px;
+        }
+        .question-meta {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+            gap: 10px;
+            margin-top: 12px;
+        }
+        .meta-item {
+            font-size: 14px;
+            color: #666;
+        }
+        .meta-label {
+            font-weight: 600;
+            color: #333;
+        }
+        .answer-box {
+            margin-top: 12px;
+            padding: 12px;
+            background: white;
+            border-radius: 6px;
+            border-left: 3px solid #4caf50;
+        }
+        .answer-label {
+            font-weight: 600;
+            color: #4caf50;
+            margin-bottom: 5px;
+        }
+        .badge {
+            display: inline-block;
+            padding: 4px 10px;
+            border-radius: 12px;
+            font-size: 12px;
+            font-weight: 600;
+            background: #e3f2fd;
+            color: #1565c0;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>❓ Questions</h1>
+        <p class="subtitle">AI-Analyzed from WhatsApp Chat • Total: """ + str(len(items)) + """ questions</p>
+"""
+
+        if not items:
+            html += '<div style="text-align: center; color: #666; padding: 40px; font-size: 18px;">No questions found in this chat.</div>'
+        else:
+            for date in sorted_dates:
+                html += f'<div class="date-section"><h2 class="date-header">{date}</h2>'
+
+                for item in by_date[date]:
+                    question = item.get('question', '').strip()
+                    if not question:
+                        continue
+
+                    asked_by = item.get('asked_by', 'Unknown')
+                    category = item.get('category', 'general')
+                    answered = item.get('answered', False)
+                    answer = item.get('answer', '')
+
+                    status_emoji = '✅' if answered else '❓'
+                    card_class = 'answered' if answered else 'unanswered'
+
+                    html += f'''
+        <div class="question-card {card_class}">
+            <div class="question-title">{status_emoji} {question}</div>
+            <div class="question-meta">
+                <div class="meta-item"><span class="meta-label">Asked by:</span> {asked_by}</div>
+                <div class="meta-item"><span class="meta-label">Category:</span> <span class="badge">{category}</span></div>
+                <div class="meta-item"><span class="meta-label">Status:</span> {'Answered' if answered else 'Unanswered'}</div>
+            </div>'''
+
+                    if answered and answer:
+                        html += f'''
+            <div class="answer-box">
+                <div class="answer-label">✅ Answer:</div>
+                <div>{answer}</div>
+            </div>'''
+
+                    html += '</div>'
+
+                html += '</div>'
+
+        html += """
+    </div>
+</body>
+</html>"""
+
+        return html

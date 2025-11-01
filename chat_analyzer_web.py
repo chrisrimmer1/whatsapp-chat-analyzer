@@ -126,32 +126,60 @@ def analyze():
         ai_results = ai_analyzer.analyze_chunk(candidates, query_type)
         print(f"✅ AI analysis complete: {len(ai_results)} refined results")
 
-        # Generate output using AI formatter
-        if query_type == 'checkins':
-            # Use HTML format for check-ins
-            output_extension = 'html'
-            output_path = filepath.replace('.txt', f'_{query_type}_AI.html')
+        # Generate output using AI formatter - always use HTML now
+        output_extension = 'html'
+        output_path = filepath.replace('.txt', f'_{query_type}_AI.html')
+
+        if query_type == 'actions':
+            html_content = AIMarkdownFormatter.format_actions_html(ai_results)
+        elif query_type == 'urls':
+            html_content = AIMarkdownFormatter.format_urls_html(ai_results)
+        elif query_type == 'questions':
+            html_content = AIMarkdownFormatter.format_questions_html(ai_results)
+        elif query_type == 'checkins':
             html_content = AIMarkdownFormatter.format_checkins_html(ai_results)
-
-            with open(output_path, 'w', encoding='utf-8') as f:
-                f.write(html_content)
         else:
-            # Use markdown format for other query types
-            output_extension = 'md'
-            output_path = filepath.replace('.txt', f'_{query_type}_AI.md')
+            # Fallback to markdown for unknown types, then wrap in basic HTML
+            markdown_content = AIMarkdownFormatter.format_generic(ai_results, query_type)
+            html_content = f"""<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>{query_type.title()} - AI Analysis</title>
+    <style>
+        body {{
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            padding: 20px;
+            min-height: 100vh;
+        }}
+        .container {{
+            max-width: 1200px;
+            margin: 0 auto;
+            background: white;
+            border-radius: 20px;
+            padding: 40px;
+            box-shadow: 0 20px 60px rgba(0, 0, 0, 0.3);
+        }}
+        pre {{
+            background: #f5f5f5;
+            padding: 20px;
+            border-radius: 8px;
+            overflow-x: auto;
+        }}
+    </style>
+</head>
+<body>
+    <div class="container">
+        <pre>{markdown_content}</pre>
+    </div>
+</body>
+</html>"""
 
-            if query_type == 'actions':
-                markdown_content = AIMarkdownFormatter.format_actions(ai_results)
-            elif query_type == 'urls':
-                markdown_content = AIMarkdownFormatter.format_urls(ai_results)
-            elif query_type == 'questions':
-                markdown_content = AIMarkdownFormatter.format_questions(ai_results)
-            else:
-                markdown_content = AIMarkdownFormatter.format_generic(ai_results, query_type)
-
-            # Write to file
-            with open(output_path, 'w', encoding='utf-8') as f:
-                f.write(markdown_content)
+        # Write to file
+        with open(output_path, 'w', encoding='utf-8') as f:
+            f.write(html_content)
 
         # Return JSON with download info
         download_filename = f'{Path(filename).stem}_{query_type}_AI.{output_extension}'
