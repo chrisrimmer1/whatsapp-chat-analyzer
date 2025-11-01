@@ -367,34 +367,15 @@
                 const result = await response.json();
 
                 if (result.success) {
-                    // Download the file and open it
-                    progressText.textContent = '📥 Opening results...';
+                    // Fetch the HTML and navigate to it
+                    progressText.textContent = '📥 Loading results...';
 
                     const downloadResponse = await fetch(result.download_url);
                     const blob = await downloadResponse.blob();
 
-                    // Create blob URL and open in new tab
+                    // Create blob URL and navigate to it in the same tab
                     const url = window.URL.createObjectURL(blob);
-                    window.open(url, '_blank');
-
-                    // Also download the file for the user to keep
-                    const a = document.createElement('a');
-                    a.href = url;
-                    a.download = result.filename;
-                    document.body.appendChild(a);
-                    a.click();
-                    document.body.removeChild(a);
-
-                    // Clean up blob URL after a delay
-                    setTimeout(() => {
-                        window.URL.revokeObjectURL(url);
-                    }, 1000);
-
-                    // Show success message
-                    progressText.textContent = '✅ Results opened in new tab! File also saved to Downloads.\n\nYou can analyze another file now.';
-                    btnText.style.display = 'inline';
-                    btnLoading.style.display = 'none';
-                    submitBtn.disabled = false;
+                    window.location.href = url;
                 } else {
                     throw new Error(result.error || 'Unknown error');
                 }
