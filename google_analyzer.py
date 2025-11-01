@@ -4,7 +4,9 @@ Google Drive & Docs Analyzer
 Analyzes files in Google Drive and extracts content from Google Docs.
 """
 
+import os
 import os.path
+import json
 from google.auth.transport.requests import Request
 from google.oauth2.credentials import Credentials
 from google_auth_oauthlib.flow import InstalledAppFlow
@@ -18,25 +20,47 @@ SCOPES = [
 ]
 
 def get_credentials():
-    """Handles OAuth flow and returns valid credentials."""
+    """Handles OAuth flow and returns valid credentials.
+
+    Supports both file-based credentials (local dev) and environment variables (Railway).
+    """
     creds = None
 
-    # Token file stores user's access and refresh tokens
-    if os.path.exists('token.json'):
+    # First, try to load from environment variables (Railway deployment)
+    google_token = os.environ.get('GOOGLE_TOKEN')
+    if google_token:
+        try:
+            token_data = json.loads(google_token)
+            creds = Credentials.from_authorized_user_info(token_data, SCOPES)
+        except Exception as e:
+            print(f"Warning: Could not load credentials from GOOGLE_TOKEN env var: {e}")
+
+    # Fall back to file-based credentials (local development)
+    if not creds and os.path.exists('token.json'):
         creds = Credentials.from_authorized_user_file('token.json', SCOPES)
 
-    # If no valid credentials, let user log in
+    # If no valid credentials, try to refresh or do OAuth flow
     if not creds or not creds.valid:
         if creds and creds.expired and creds.refresh_token:
-            creds.refresh(Request())
-        else:
+            try:
+                creds.refresh(Request())
+                # Save refreshed credentials back to file if possible
+                if os.path.exists('token.json'):
+                    with open('token.json', 'w') as token:
+                        token.write(creds.to_json())
+            except Exception as e:
+                print(f"Warning: Could not refresh credentials: {e}")
+                creds = None
+        elif os.path.exists('credentials.json'):
+            # Local development - do OAuth flow
             flow = InstalledAppFlow.from_client_secrets_file(
                 'credentials.json', SCOPES)
             creds = flow.run_local_server(port=0)
-
-        # Save credentials for next run
-        with open('token.json', 'w') as token:
-            token.write(creds.to_json())
+            # Save credentials for next run
+            with open('token.json', 'w') as token:
+                token.write(creds.to_json())
+        else:
+            raise Exception("No Google credentials available. See GOOGLE_SETUP.md")
 
     return creds
 

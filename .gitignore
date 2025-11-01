@@ -1,5 +1,7 @@
-# Environment variables (contains API keys!)
+# Environment variables and credentials (contains API keys!)
 .env
+credentials.json
+token.json
 
 # Python
 __pycache__/
