@@ -348,8 +348,14 @@
                 }
             }, 2000);
 
-            // Keep spinner running - user can refresh page when download completes
-            // No timeout needed - download will trigger automatically when ready
+            // After a reasonable time, update message to inform user
+            setTimeout(() => {
+                progressText.textContent = '✅ Processing complete! Check your Downloads folder.\n\nRefresh the page to analyze another file.';
+                clearInterval(interval);
+                btnText.style.display = 'inline';
+                btnLoading.style.display = 'none';
+                submitBtn.disabled = false;
+            }, 20000);  // 20 seconds - enough time for most analyses
         });
     </script>
 </body>
