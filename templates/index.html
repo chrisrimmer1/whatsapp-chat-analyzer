@@ -367,15 +367,9 @@
                 const result = await response.json();
 
                 if (result.success) {
-                    // Fetch the HTML and navigate to it
+                    // Navigate directly to the results page
                     progressText.textContent = '📥 Loading results...';
-
-                    const downloadResponse = await fetch(result.download_url);
-                    const blob = await downloadResponse.blob();
-
-                    // Create blob URL and navigate to it in the same tab
-                    const url = window.URL.createObjectURL(blob);
-                    window.location.href = url;
+                    window.location.href = result.download_url;
                 } else {
                     throw new Error(result.error || 'Unknown error');
                 }

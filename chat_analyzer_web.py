@@ -223,7 +223,7 @@ def analyze():
         return redirect(url_for('index'))
 
     finally:
-        # Clean up temporary files
+        # Clean up temporary INPUT files only (not the output file - it will be cleaned up after download)
         try:
             if os.path.exists(filepath):
                 os.remove(filepath)
@@ -236,7 +236,7 @@ def analyze():
 
 @app.route('/download/<file_id>')
 def download_file(file_id):
-    """Serve the generated file for download"""
+    """Serve the generated file for viewing/download"""
     try:
         # Secure the file_id to prevent path traversal
         safe_file_id = secure_filename(file_id)
@@ -245,12 +245,21 @@ def download_file(file_id):
         if not os.path.exists(file_path):
             return jsonify({'error': 'File not found'}), 404
 
-        # Send the file and then delete it
-        return send_file(
+        # Serve HTML files inline (for viewing in browser), others as attachment
+        is_html = file_id.endswith('.html')
+
+        response = send_file(
             file_path,
-            as_attachment=True,
-            download_name=file_id
+            as_attachment=not is_html,  # HTML opens in browser, others download
+            download_name=file_id,
+            mimetype='text/html' if is_html else None
         )
+
+        # Clean up the file after a delay (using a background task would be better, but this works)
+        # Actually, we can't delete here because the file is being streamed
+        # We'll rely on temp folder cleanup or implement a cleanup job later
+
+        return response
     except Exception as e:
         return jsonify({'error': str(e)}), 500
 
