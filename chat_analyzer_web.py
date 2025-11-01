@@ -56,6 +56,17 @@ def index():
     return render_template('index.html', query_types=QUERY_TYPES)
 
 
+@app.route('/debug/env')
+def debug_env():
+    """Debug endpoint to check environment variables"""
+    env_check = {
+        'GOOGLE_TOKEN': 'SET' if os.environ.get('GOOGLE_TOKEN') else 'NOT SET',
+        'GOOGLE_TOKEN_LENGTH': len(os.environ.get('GOOGLE_TOKEN', '')) if os.environ.get('GOOGLE_TOKEN') else 0,
+        'OPENROUTER_API_KEY': 'SET' if os.environ.get('OPENROUTER_API_KEY') else 'NOT SET',
+    }
+    return jsonify(env_check)
+
+
 @app.route('/analyze', methods=['POST'])
 def analyze():
     """Process uploaded file and extract information"""
