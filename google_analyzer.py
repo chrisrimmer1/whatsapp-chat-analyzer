@@ -32,9 +32,10 @@ def get_credentials():
     if google_token:
         try:
             print(f"DEBUG: Attempting to parse GOOGLE_TOKEN JSON...")
-            # Try to clean up the token string in case of encoding issues
-            google_token_cleaned = google_token.strip()
+            # Remove any newlines/whitespace that Railway might have added
+            google_token_cleaned = google_token.replace('\n', '').replace('\r', '').strip()
             print(f"DEBUG: First 200 chars: {google_token_cleaned[:200]}")
+            print(f"DEBUG: Cleaned length: {len(google_token_cleaned)}")
             token_data = json.loads(google_token_cleaned)
             print(f"DEBUG: JSON parsed successfully, keys: {list(token_data.keys())}")
             creds = Credentials.from_authorized_user_info(token_data, SCOPES)
