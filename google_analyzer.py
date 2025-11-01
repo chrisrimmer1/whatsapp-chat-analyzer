@@ -32,35 +32,41 @@ def get_credentials():
         try:
             token_data = json.loads(google_token)
             creds = Credentials.from_authorized_user_info(token_data, SCOPES)
+            print(f"✓ Loaded credentials from GOOGLE_TOKEN environment variable")
         except Exception as e:
-            print(f"Warning: Could not load credentials from GOOGLE_TOKEN env var: {e}")
+            print(f"❌ Could not load credentials from GOOGLE_TOKEN env var: {e}")
 
     # Fall back to file-based credentials (local development)
     if not creds and os.path.exists('token.json'):
         creds = Credentials.from_authorized_user_file('token.json', SCOPES)
+        print(f"✓ Loaded credentials from token.json file")
 
     # If no valid credentials, try to refresh or do OAuth flow
     if not creds or not creds.valid:
         if creds and creds.expired and creds.refresh_token:
             try:
+                print(f"⟳ Refreshing expired credentials...")
                 creds.refresh(Request())
                 # Save refreshed credentials back to file if possible
                 if os.path.exists('token.json'):
                     with open('token.json', 'w') as token:
                         token.write(creds.to_json())
+                print(f"✓ Credentials refreshed successfully")
             except Exception as e:
-                print(f"Warning: Could not refresh credentials: {e}")
+                print(f"❌ Could not refresh credentials: {e}")
                 creds = None
         elif os.path.exists('credentials.json'):
             # Local development - do OAuth flow
+            print(f"Starting OAuth flow...")
             flow = InstalledAppFlow.from_client_secrets_file(
                 'credentials.json', SCOPES)
             creds = flow.run_local_server(port=0)
             # Save credentials for next run
             with open('token.json', 'w') as token:
                 token.write(creds.to_json())
+            print(f"✓ OAuth flow completed, credentials saved")
         else:
-            raise Exception("No Google credentials available. See GOOGLE_SETUP.md")
+            raise Exception("No Google credentials available. Need either GOOGLE_TOKEN env var or token.json file. See GOOGLE_SETUP.md")
 
     return creds
 
