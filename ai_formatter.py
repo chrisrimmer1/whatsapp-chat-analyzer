@@ -963,13 +963,28 @@ class AIMarkdownFormatter:
                     # Use the original message content like action items do
                     original_content = item.get('full_message', item.get('context', 'No context available'))
 
+                    # Get URL content info if available
+                    url_title = item.get('url_title', '')
+                    url_summary = item.get('url_summary', '')
+
                     html += f'''
         <div class="link-card">
             <div class="link-title">🔗 {description}</div>
             <a href="{url}" target="_blank" class="link-url">{url}</a>
             <div class="link-meta">
                 <div class="meta-item"><span class="meta-label">Shared by:</span> {shared_by} at {time}</div>
-            </div>
+            </div>'''
+
+                    # Show URL content summary if available
+                    if url_title or url_summary:
+                        html += f'''
+            <div style="margin-top: 10px; padding: 12px; background: #e8f5e9; border-radius: 6px; border-left: 3px solid #4caf50;">
+                <div style="font-weight: 600; color: #2e7d32; margin-bottom: 4px; font-size: 14px;">📄 Content: {url_title or 'Unknown'}</div>
+                <div style="font-size: 13px; color: #555;">{url_summary or 'No summary available'}</div>
+            </div>'''
+
+                    # Show original message
+                    html += f'''
             <div style="margin-top: 10px; padding: 10px; background: white; border-radius: 6px; font-size: 13px; color: #666; font-style: italic;">
                 "{original_content[:200]}..."
             </div>

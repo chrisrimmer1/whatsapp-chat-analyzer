@@ -18,6 +18,15 @@ load_dotenv()
 from chat_analyzer import ChatParser, CandidateExtractor
 from ai_formatter import AIMarkdownFormatter
 
+# Import URL content analyzer
+try:
+    from url_summarizer import analyze_url
+    from google_analyzer import get_credentials, get_drive_service, get_docs_service
+    URL_ANALYSIS_AVAILABLE = True
+except ImportError:
+    URL_ANALYSIS_AVAILABLE = False
+    print("⚠️  URL content analysis not available (missing dependencies)")
+
 
 class AIAnalyzer:
     """AI-powered analysis of chat candidates"""
@@ -49,6 +58,11 @@ class AIAnalyzer:
             List of AI-analyzed and enriched items
         """
 
+        # Enrich URLs with content analysis before AI processing
+        if query_type == 'urls' and URL_ANALYSIS_AVAILABLE:
+            print("  🔍 Analyzing URL content...")
+            candidates = self._enrich_urls_with_content(candidates)
+
         results = []
 
         # Process in chunks
@@ -61,6 +75,39 @@ class AIAnalyzer:
             results.extend(analyzed)
 
         return results
+
+    def _enrich_urls_with_content(self, candidates: List[Dict[str, Any]]) -> List[Dict[str, Any]]:
+        """Enrich URL candidates with actual content from the URLs"""
+
+        # Initialize Google services once
+        drive_service = None
+        docs_service = None
+
+        try:
+            creds = get_credentials()
+            drive_service = get_drive_service()
+            docs_service = get_docs_service()
+        except Exception as e:
+            print(f"  ⚠️  Google services not available: {e}")
+
+        enriched = []
+        for i, candidate in enumerate(candidates):
+            url = candidate.get('url', '')
+
+            # Analyze the URL to get title and summary
+            try:
+                content_info = analyze_url(url, drive_service, docs_service)
+                candidate['url_title'] = content_info.get('title', 'Unknown')
+                candidate['url_summary'] = content_info.get('summary', 'No summary available')
+                print(f"    ✓ [{i+1}/{len(candidates)}] {content_info.get('title', 'Unknown')}")
+            except Exception as e:
+                print(f"    ⚠️  [{i+1}/{len(candidates)}] Error analyzing {url}: {e}")
+                candidate['url_title'] = 'Unknown'
+                candidate['url_summary'] = 'Could not analyze URL'
+
+            enriched.append(candidate)
+
+        return enriched
 
     def _analyze_single_chunk(self, chunk: List[Dict[str, Any]], query_type: str) -> List[Dict[str, Any]]:
         """Analyze a single chunk of candidates"""
@@ -191,12 +238,17 @@ Messages to analyze:
         """Prompt for URL analysis"""
 
         return f"""Analyze these URLs shared in a WhatsApp chat conversation.
+
+Each URL has been analyzed and includes:
+- url_title: The actual title/name of the linked content
+- url_summary: A summary of what the URL contains
+
 For each URL, determine:
 
-1. What type of content is it? (e.g., "meeting notes", "video", "document", "article", "tool", etc.)
-2. Generate a better description if the original is unclear or empty
+1. What type of content is it? (Use the url_title and url_summary to help - e.g., "meeting notes", "video", "document", "article", "tool", etc.)
+2. Create a clear description using the url_title and url_summary
 3. Summarize the surrounding context from messages before/after (1-2 sentences explaining why it was shared)
-4. Is it important? (true/false based on context)
+4. Is it important? (true/false based on content and context)
 
 Return ONLY a JSON array with this structure:
 [
@@ -204,7 +256,7 @@ Return ONLY a JSON array with this structure:
     "url": "the URL",
     "type": "content type",
     "context": "summary of why this was shared based on surrounding messages",
-    "description": "clear description",
+    "description": "clear description based on url_title and url_summary",
     "important": true/false,
     "shared_by": "person name",
     "date": "date from the message (DD/MM/YYYY format)",
@@ -212,7 +264,7 @@ Return ONLY a JSON array with this structure:
   }}
 ]
 
-Messages to analyze (each includes context_before and context_after showing surrounding conversation):
+Messages to analyze (each includes url_title, url_summary, context_before and context_after):
 {json.dumps(chunk, indent=2)}
 """
 
