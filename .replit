@@ -1,0 +1,12 @@
+run = "python3 chat_analyzer_web.py"
+language = "python3"
+
+[nix]
+channel = "stable-22_11"
+
+[deployment]
+run = ["sh", "-c", "python3 chat_analyzer_web.py"]
+deploymentTarget = "cloudrun"
+
+[env]
+PORT = "5000"

@@ -1,0 +1,34 @@
+# Environment variables (contains API keys!)
+.env
+
+# Python
+__pycache__/
+*.py[cod]
+*$py.class
+*.so
+.Python
+venv/
+ENV/
+env/
+
+# IDE
+.vscode/
+.idea/
+*.swp
+*.swo
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Output files from analysis (but keep documentation)
+!README.md
+!CLAUDE.md
+!CLAUDE_CODE_CONTEXT.md
+*.html
+*.json
+!requirements.txt
+
+# Temporary files
+*.txt
+!requirements.txt
