@@ -608,6 +608,11 @@ if __name__ == '__main__':
         const uploadArea = document.getElementById('uploadArea');
         const fileName = document.getElementById('fileName');
 
+        // Check if file is already selected (e.g., after browser back button)
+        if (fileInput.files.length > 0) {
+            fileName.textContent = '✓ ' + fileInput.files[0].name;
+        }
+
         fileInput.addEventListener('change', function() {
             if (this.files.length > 0) {
                 fileName.textContent = '✓ ' + this.files[0].name;
